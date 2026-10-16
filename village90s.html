@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1990s Bangladeshi Village — Kalbaishakhi & Monsoon Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+    body {
+      background-color: #0b0d11;
+      font-family: 'Space Mono', monospace;
+      color: #e6d5b8;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1024px;
+      aspect-ratio: 16 / 9;
+      border: 3px solid #3a2e21;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 25px rgba(243, 198, 119, 0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #090b10;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Custom Range Input Styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #2a2118;
+      height: 6px;
+      border-radius: 4px;
+      border: 1px solid #4a3a2a;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #f3c677;
+      cursor: pointer;
+      border: 2px solid #2e241b;
+      box-shadow: 0 0 6px rgba(243, 198, 119, 0.6);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #f3c677;
+      cursor: pointer;
+      border: 2px solid #2e241b;
+      box-shadow: 0 0 6px rgba(243, 198, 119, 0.6);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .btn-retro {
+      background: linear-gradient(180deg, #35291e 0%, #241b13 100%);
+      color: #f3c677;
+      border: 1px solid #634b35;
+      box-shadow: 0 2px 0 #140f0a;
+      transition: all 0.15s ease;
+    }
+    .btn-retro:hover {
+      background: linear-gradient(180deg, #473728 0%, #302419 100%);
+      border-color: #8c6a4b;
+    }
+    .btn-retro:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 #140f0a;
+    }
+    .btn-storm-active {
+      background: linear-gradient(180deg, #1f3a52 0%, #122436 100%);
+      color: #9cd5ff;
+      border-color: #4885b8;
+      box-shadow: 0 0 12px rgba(72, 133, 184, 0.4);
+    }
+    .btn-storm-active:hover {
+      background: linear-gradient(180deg, #274866 0%, #172f47 100%);
+      border-color: #6ab0e8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-6">
+
+  <!-- Header Title & Status Badge -->
+  <div class="w-full max-w-5xl flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
+    <div class="flex items-center gap-3">
+      <span class="inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse" id="statusDot"></span>
+      <h1 class="text-sm sm:text-base font-bold tracking-wider text-amber-200/90 uppercase">
+        1990s Gram-Bangla • <span id="weatherBadge" class="text-amber-400">Shanto (Calm)</span>
+      </h1>
+    </div>
+    <div class="text-xs text-amber-100/70 flex items-center gap-3">
+      <span id="timeLabel" class="bg-[#1a1612] px-3 py-1 rounded-full border border-[#3a2e21]">
+        Time: Godhuli (Golden Dusk)
+      </span>
+    </div>
+  </div>
+
+  <!-- Main Interactive Canvas Container -->
+  <div class="canvas-wrapper">
+    <canvas id="villageCanvas" width="960" height="540"></canvas>
+
+    <!-- Floating On-Canvas Audio Unlock Toast (Auto-hides once interacted) -->
+    <div id="audioNotice" class="pointer-events-none absolute top-3 right-3 bg-black/75 backdrop-blur-sm border border-amber-500/30 text-amber-200 text-xs px-3 py-1.5 rounded-lg transition-opacity duration-500 opacity-90">
+      🔊 Click "Kalbaishakhi Storm" or unmute for Tin-Roof Rain & Thunder Audio
+    </div>
+  </div>
+
+  <!-- Control Deck / HUD -->
+  <div class="w-full max-w-5xl mt-4 bg-[#16130f] border border-[#3a2e21] rounded-xl p-3 sm:p-4 shadow-2xl">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+      
+      <!-- Time Controls -->
+      <div class="md:col-span-5 flex flex-wrap items-center gap-3 bg-[#1f1914] p-2.5 rounded-lg border border-[#2e241b]">
+        <button id="toggleAuto" class="btn-retro px-3 py-1.5 rounded text-xs font-bold shrink-0">
+          ⏸ Pause Cycle
+        </button>
+        <div class="flex-1 flex flex-col gap-1 min-w-[140px]">
+          <div class="flex justify-between text-[11px] text-amber-200/70">
+            <span>Prohor (Time Scrub)</span>
+            <span id="clockReadout">18:15</span>
+          </div>
+          <input type="range" id="timeSlider" min="0" max="1000" value="625" class="w-full">
+        </div>
+      </div>
+
+      <!-- Kalbaishakhi / Monsoon Controls -->
+      <div class="md:col-span-4 flex flex-wrap items-center gap-3 bg-[#1f1914] p-2.5 rounded-lg border border-[#2e241b]">
+        <button id="toggleStormBtn" class="btn-retro px-3 py-1.5 rounded text-xs font-bold shrink-0 flex items-center gap-1.5">
+          <span>⛈️</span> <span id="stormBtnText">Kalbaishakhi Storm</span>
+        </button>
+        <div class="flex-1 flex flex-col gap-1 min-w-[110px]">
+          <div class="flex justify-between text-[11px] text-sky-200/80">
+            <span>Brishti (Intensity)</span>
+            <span id="stormPctLabel">0%</span>
+          </div>
+          <input type="range" id="stormSlider" min="0" max="100" value="0" class="w-full">
+        </div>
+      </div>
+
+      <!-- Audio & Lightning Trigger Controls -->
+      <div class="md:col-span-3 flex items-center justify-between md:justify-end gap-2 bg-[#1f1914] p-2.5 rounded-lg border border-[#2e241b]">
+        <button id="strikeBtn" class="btn-retro px-2.5 py-1.5 rounded text-xs font-bold shrink-0" title="Trigger Biddut (Lightning Strike)">
+          ⚡ Biddut
+        </button>
+        <button id="muteBtn" class="btn-retro px-2.5 py-1.5 rounded text-xs font-bold shrink-0" title="Toggle Web Audio Synthesizer">
+          🔊 Audio
+        </button>
+        <input type="range" id="volSlider" min="0" max="100" value="75" class="w-16 sm:w-20" title="Master Volume">
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/**
+ * 1990s BANGLADESHI VILLAGE (GRAM-BANGLA) & KALBAISHAKHI STORM ENGINE
+ * Self-contained Canvas 2D + Procedural Web Audio API Synthesizer
+ */
+
+const canvas = document.getElementById('villageCanvas');
+const ctx = canvas.getContext('2d');
+
+// UI Elements
+const timeSlider = document.getElementById('timeSlider');
+const timeLabel = document.getElementById('timeLabel');
+const clockReadout = document.getElementById('clockReadout');
+const toggleAutoBtn = document.getElementById('toggleAuto');
+const toggleStormBtn = document.getElementById('toggleStormBtn');
+const stormBtnText = document.getElementById('stormBtnText');
+const stormSlider = document.getElementById('stormSlider');
+const stormPctLabel = document.getElementById('stormPctLabel');
+const weatherBadge = document.getElementById('weatherBadge');
+const statusDot = document.getElementById('statusDot');
+const strikeBtn = document.getElementById('strikeBtn');
+const muteBtn = document.getElementById('muteBtn');
+const volSlider = document.getElementById('volSlider');
+const audioNotice = document.getElementById('audioNotice');
+
+const W = canvas.width;
+const H = canvas.height;
+
+// Simulation State
+let timeOfDay = 0.625; // Starts at Godhuli (Golden Dusk)
+let autoCycle = true;
+let frame = 0;
+
+// Kalbaishakhi / Monsoon Storm State
+let stormTarget = 0.0;     // 0.0 = Dry/Calm, 1.0 = Full Kalbaishakhi Tempest
+let stormIntensity = 0.0;  // Smoothly interpolated intensity
+let windVelocity = 1.0;    // Dynamically driven by stormIntensity
+
+// Lightning State
+let lightningFlash = 0.0;
+let activeBolt = null;
+
+// ============================================================================
+// PROCEDURAL WEB AUDIO API SOUND ENGINE (Tin-Roof Rain, Wind & Rolling Thunder)
+// ============================================================================
+class GramBanglaAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.isMuted = false;
+    this.masterVol = 0.75;
+    this.initialized = false;
+
+    this.masterGain = null;
+    this.rainGain = null;
+    this.tinRoofGain = null;
+    this.windGain = null;
+    this.windFilter = null;
+  }
+
+  init() {
+    if (this.initialized) {
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+      return;
+    }
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AudioCtx();
+
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = this.isMuted ? 0 : this.masterVol;
+      this.masterGain.connect(this.ctx.destination);
+
+      // Create 3-second looping noise buffers (White & Pink/Brown)
+      const bufferSize = this.ctx.sampleRate * 3;
+      const whiteBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const pinkBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+
+      const whiteData = whiteBuffer.getChannelData(0);
+      const pinkData = pinkBuffer.getChannelData(0);
+
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        whiteData[i] = white;
+
+        // Paul Kellet's pink noise filter approximation
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        pinkData[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.04;
+        b6 = white * 0.115926;
+      }
+
+      // 1. Ambient Monsoon Rain Layer (Pink noise through lowpass)
+      const rainSource = this.ctx.createBufferSource();
+      rainSource.buffer = pinkBuffer;
+      rainSource.loop = true;
+
+      const rainFilter = this.ctx.createBiquadFilter();
+      rainFilter.type = 'lowpass';
+      rainFilter.frequency.value = 1350;
+
+      this.rainGain = this.ctx.createGain();
+      this.rainGain.gain.value = 0.0;
+
+      rainSource.connect(rainFilter);
+      rainFilter.connect(this.rainGain);
+      this.rainGain.connect(this.masterGain);
+      rainSource.start();
+
+      // 2. Corrugated Tin Roof (Chouchala) Resonance Layer (Bandpass metallic pattering)
+      const tinSource = this.ctx.createBufferSource();
+      tinSource.buffer = whiteBuffer;
+      tinSource.loop = true;
+
+      const tinBandpass = this.ctx.createBiquadFilter();
+      tinBandpass.type = 'bandpass';
+      tinBandpass.frequency.value = 2650; // Metallic tin-roof resonance
+      tinBandpass.Q.value = 2.4;
+
+      const tinHighpass = this.ctx.createBiquadFilter();
+      tinHighpass.type = 'highpass';
+      tinHighpass.frequency.value = 1800;
+
+      this.tinRoofGain = this.ctx.createGain();
+      this.tinRoofGain.gain.value = 0.0;
+
+      tinSource.connect(tinBandpass);
+      tinBandpass.connect(tinHighpass);
+      tinHighpass.connect(this.tinRoofGain);
+      this.tinRoofGain.connect(this.masterGain);
+      tinSource.start();
+
+      // 3. Kalbaishakhi Wind Gusts Layer (Sweeping Lowpass Pink Noise)
+      const windSource = this.ctx.createBufferSource();
+      windSource.buffer = pinkBuffer;
+      windSource.loop = true;
+
+      this.windFilter = this.ctx.createBiquadFilter();
+      this.windFilter.type = 'bandpass';
+      this.windFilter.frequency.value = 280;
+      this.windFilter.Q.value = 3.5;
+
+      this.windGain = this.ctx.createGain();
+      this.windGain.gain.value = 0.0;
+
+      windSource.connect(this.windFilter);
+      this.windFilter.connect(this.windGain);
+      this.windGain.connect(this.masterGain);
+      windSource.start();
+
+      this.initialized = true;
+      if (audioNotice) audioNotice.style.opacity = '0';
+    } catch (err) {
+      console.warn('Web Audio API could not initialize:', err);
+    }
+  }
+
+  update(stormLevel, frameCount) {
+    if (!this.initialized || !this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    if (stormLevel <= 0.002) {
+      this.rainGain.gain.setTargetAtTime(0, now, 0.06);
+      this.tinRoofGain.gain.setTargetAtTime(0, now, 0.06);
+      this.windGain.gain.setTargetAtTime(0, now, 0.06);
+      return;
+    }
+
+    // Smoothly modulate rain, tin roof pattering, and howling wind
+    const targetRain = Math.pow(stormLevel, 1.1) * 0.65;
+    const targetTin = Math.pow(stormLevel, 1.4) * 0.22;
+    const gustWave = 0.5 + 0.5 * Math.sin(frameCount * 0.025) * Math.cos(frameCount * 0.011);
+    const targetWind = stormLevel * (0.25 + gustWave * 0.35);
+
+    this.rainGain.gain.setTargetAtTime(targetRain, now, 0.08);
+    this.tinRoofGain.gain.setTargetAtTime(targetTin, now, 0.08);
+    this.windGain.gain.setTargetAtTime(targetWind, now, 0.12);
+
+    // Modulate wind pitch with gusts
+    const windFreq = 190 + stormLevel * 220 + gustWave * 160;
+    this.windFilter.frequency.setTargetAtTime(windFreq, now, 0.12);
+  }
+
+  triggerThunder(intensity = 1.0) {
+    if (!this.initialized || !this.ctx || this.isMuted) return;
+
+    // Slight acoustic delay after visual flash for realism
+    const delay = 0.18 + Math.random() * 0.35;
+    const startTime = this.ctx.currentTime + delay;
+    const duration = 3.2 + Math.random() * 1.5;
+
+    // Create burst of brown/low-filtered noise for rolling thunder rumble
+    const bufLen = Math.floor(this.ctx.sampleRate * duration);
+    const buffer = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    let lastOut = 0.0;
+    for (let i = 0; i < bufLen; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (lastOut + (0.02 * white)) / 1.02;
+      lastOut = data[i];
+      // Add rolling amplitude envelopes (multiple echoes across the river plain)
+      const env = Math.sin((i / bufLen) * Math.PI);
+      const roll = 0.65 + 0.35 * Math.sin(i * 0.0012) * Math.cos(i * 0.00045);
+      data[i] *= 3.8 * env * roll;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(240, startTime);
+    filter.frequency.exponentialRampToValueAtTime(55, startTime + duration);
+
+    const thunderGain = this.ctx.createGain();
+    thunderGain.gain.setValueAtTime(0.01, startTime);
+    thunderGain.gain.linearRampToValueAtTime(0.95 * intensity, startTime + 0.12);
+    thunderGain.gain.exponentialRampToValueAtTime(0.35 * intensity, startTime + 0.9);
+    thunderGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+    noise.connect(filter);
+    filter.connect(thunderGain);
+    thunderGain.connect(this.masterGain);
+
+    noise.start(startTime);
+    noise.stop(startTime + duration);
+  }
+
+  setVolume(val) {
+    this.masterVol = val;
+    if (this.initialized && this.masterGain && !this.isMuted) {
+      this.masterGain.gain.setTargetAtTime(this.masterVol, this.ctx.currentTime, 0.08);
+    }
+  }
+
+  toggleMute() {
+    this.init();
+    this.isMuted = !this.isMuted;
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : this.masterVol, this.ctx.currentTime, 0.08);
+    }
+    return this.isMuted;
+  }
+}
+
+const audioEngine = new GramBanglaAudioEngine();
+
+// ============================================================================
+// UI EVENT LISTENERS
+// ============================================================================
+toggleAutoBtn.addEventListener('click', () => {
+  autoCycle = !autoCycle;
+  toggleAutoBtn.textContent = autoCycle ? '⏸ Pause Cycle' : '▶ Play Cycle';
+});
+
+timeSlider.addEventListener('input', (e) => {
+  timeOfDay = parseFloat(e.target.value) / 1000;
+});
+
+let isUserDraggingStorm = false;
+
+function syncStormStatus(intensity) {
+  if (intensity <= 0.005) {
+    toggleStormBtn.classList.remove('btn-storm-active');
+    stormBtnText.textContent = 'Kalbaishakhi Storm';
+    weatherBadge.textContent = 'Shanto (Calm)';
+    weatherBadge.className = 'text-amber-400 font-semibold';
+    statusDot.className = 'inline-block w-3 h-3 rounded-full bg-amber-400 animate-pulse';
+  } else if (intensity <= 0.30) {
+    toggleStormBtn.classList.add('btn-storm-active');
+    stormBtnText.textContent = 'Stop Rain';
+    weatherBadge.textContent = 'Rimjhim Brishti (Light Drizzle)';
+    weatherBadge.className = 'text-teal-400 font-bold';
+    statusDot.className = 'inline-block w-3 h-3 rounded-full bg-teal-400 animate-ping';
+  } else if (intensity <= 0.65) {
+    toggleStormBtn.classList.add('btn-storm-active');
+    stormBtnText.textContent = 'Stop Rain';
+    weatherBadge.textContent = 'Barsha (Monsoon Rain)';
+    weatherBadge.className = 'text-sky-400 font-bold';
+    statusDot.className = 'inline-block w-3 h-3 rounded-full bg-sky-400 animate-ping';
+  } else {
+    toggleStormBtn.classList.add('btn-storm-active');
+    stormBtnText.textContent = 'Kalbaishakhi Active';
+    weatherBadge.textContent = 'Kalbaishakhi Jhor (Tempest)';
+    weatherBadge.className = 'text-cyan-300 font-bold';
+    statusDot.className = 'inline-block w-3 h-3 rounded-full bg-cyan-400 animate-ping';
+  }
+}
+
+function updateStormUI(targetVal, immediate = false) {
+  stormTarget = Math.max(0, Math.min(1, targetVal));
+  if (immediate) {
+    stormIntensity = stormTarget;
+    stormSlider.value = Math.round(stormIntensity * 100);
+    stormPctLabel.textContent = `${Math.round(stormIntensity * 100)}%`;
+    syncStormStatus(stormIntensity);
+  }
+}
+
+toggleStormBtn.addEventListener('click', () => {
+  audioEngine.init();
+  isUserDraggingStorm = false;
+  const nextState = (stormTarget > 0.05 || stormIntensity > 0.05) ? 0.0 : 0.85;
+  stormTarget = nextState;
+  if (stormTarget > 0.5 && stormIntensity < 0.2) {
+    triggerLightningBolt();
+  }
+});
+
+stormSlider.addEventListener('input', (e) => {
+  audioEngine.init();
+  isUserDraggingStorm = true;
+  const val = Math.max(0, Math.min(1, parseFloat(e.target.value) / 100));
+  stormTarget = val;
+  stormIntensity = val;
+  stormPctLabel.textContent = `${Math.round(val * 100)}%`;
+  syncStormStatus(val);
+});
+
+['change', 'pointerup', 'mouseup', 'touchend'].forEach(evt => {
+  stormSlider.addEventListener(evt, () => {
+    isUserDraggingStorm = false;
+  });
+});
+
+strikeBtn.addEventListener('click', () => {
+  audioEngine.init();
+  triggerLightningBolt();
+});
+
+muteBtn.addEventListener('click', () => {
+  const muted = audioEngine.toggleMute();
+  muteBtn.textContent = muted ? '🔇 Muted' : '🔊 Audio';
+});
+
+volSlider.addEventListener('input', (e) => {
+  audioEngine.init();
+  audioEngine.setVolume(parseFloat(e.target.value) / 100);
+});
+
+// ============================================================================
+// SCENE ENTITIES & PROCEDURAL PARTICLES
+// ============================================================================
+const lerp = (a, b, t) => a + (b - a) * Math.max(0, Math.min(1, t));
+function lerpColor(c1, c2, t) {
+  return [
+    Math.round(lerp(c1[0], c2[0], t)),
+    Math.round(lerp(c1[1], c2[1], t)),
+    Math.round(lerp(c1[2], c2[2], t))
+  ];
+}
+const rgb = (arr, alpha = 1) => `rgba(${arr[0]}, ${arr[1]}, ${arr[2]}, ${alpha})`;
+
+// Stars
+const stars = Array.from({ length: 130 }, () => ({
+  x: Math.random() * W,
+  y: Math.random() * (H * 0.55),
+  r: Math.random() * 1.4 + 0.4,
+  phase: Math.random() * Math.PI * 2
+}));
+
+// Fireflies (Jonaki Poka) - Hide when rain is heavy
+const fireflies = Array.from({ length: 48 }, () => ({
+  x: Math.random() * W,
+  y: H * 0.35 + Math.random() * (H * 0.45),
+  vx: (Math.random() - 0.5) * 0.6,
+  vy: (Math.random() - 0.5) * 0.4,
+  phase: Math.random() * Math.PI * 2
+}));
+
+// Birds (Flee faster during storm)
+const birds = Array.from({ length: 14 }, (_, i) => ({
+  x: 150 + i * 28 + Math.random() * 15,
+  y: 105 + (i % 4) * 14,
+  wingPhase: i * 0.6
+}));
+
+// Water Lilies (Shapla)
+const waterLilies = [
+  { x: 135, y: 468, scale: 0.95 },
+  { x: 195, y: 488, scale: 1.12 },
+  { x: 88,  y: 498, scale: 0.85 },
+  { x: 255, y: 508, scale: 1.02 },
+  { x: 162, y: 518, scale: 0.90 }
+];
+
+// Rolling Storm Clouds (Megh)
+const stormClouds = Array.from({ length: 14 }, (_, i) => ({
+  x: (i * 95) % (W + 240) - 120,
+  y: 28 + (i % 3) * 36,
+  w: 190 + (i % 4) * 45,
+  h: 48 + (i % 3) * 16,
+  speed: 0.35 + (i % 3) * 0.18,
+  shadeOffset: (i % 3) * 6
+}));
+
+// Raindrops Pool
+const MAX_RAINDROPS = 600;
+const raindrops = Array.from({ length: MAX_RAINDROPS }, () => ({
+  x: Math.random() * (W + 240),
+  y: Math.random() * H,
+  len: 12 + Math.random() * 16,
+  speed: 12 + Math.random() * 6,
+  thickness: 1.0 + Math.random() * 0.6
+}));
+
+// Dynamic Tin-Roof & Ground Splash Particles + River Ripples
+const roofSplashes = [];
+const waterRipples = [];
+
+function spawnRoofSplash(x, y) {
+  if (roofSplashes.length > 90) return;
+  const count = 2 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < count; i++) {
+    roofSplashes.push({
+      x,
+      y,
+      vx: (Math.random() - 0.65) * 3.2,
+      vy: -1.8 - Math.random() * 2.6,
+      life: 1.0
+    });
+  }
+}
+
+function spawnWaterRipple(x, y, isCourtyard = false) {
+  if (waterRipples.length > 75) return;
+  waterRipples.push({
+    x,
+    y,
+    r: 1.5,
+    maxR: isCourtyard ? (8 + Math.random() * 8) : (14 + Math.random() * 18),
+    life: 1.0,
+    isCourtyard
+  });
+}
+
+// ============================================================================
+// FORKED LIGHTNING GENERATOR (Kalbaishakhi Biddut)
+// ============================================================================
+function triggerLightningBolt() {
+  lightningFlash = 1.0;
+  const startX = 180 + Math.random() * (W - 320);
+  const segments = [];
+
+  function buildBranch(x, y, endY, branchDepth) {
+    let currX = x;
+    let currY = y;
+    while (currY < endY) {
+      const nextY = currY + 14 + Math.random() * 18;
+      const nextX = currX + (Math.random() - 0.52) * 38;
+      segments.push({
+        x1: currX, y1: currY,
+        x2: nextX, y2: nextY,
+        width: branchDepth === 0 ? 2.8 : 1.2
+      });
+      currX = nextX;
+      currY = nextY;
+
+      // Occasional forked sub-branch
+      if (branchDepth === 0 && Math.random() < 0.28 && currY < 220) {
+        buildBranch(currX, currY, currY + 75 + Math.random() * 60, 1);
+      }
+    }
+  }
+
+  buildBranch(startX, 0, 250 + Math.random() * 55, 0);
+  activeBolt = { segments, alpha: 1.0 };
+  audioEngine.triggerThunder(0.75 + stormIntensity * 0.45);
+}
+
+// ============================================================================
+// ATMOSPHERE & LIGHTING CALCULATIONS
+// ============================================================================
+function getAtmosphere(t, storm) {
+  const keyframes = [
+    { t: 0.00, top: [10, 14, 34],    bot: [22, 28, 52],    amb: 0.15, name: "Nijhum Raat (Midnight)" },
+    { t: 0.23, top: [45, 50, 95],    bot: [215, 120, 95],  amb: 0.55, name: "Bhor (Dawn)" },
+    { t: 0.45, top: [75, 155, 215],  bot: [185, 225, 240], amb: 1.00, name: "Dupur (Midday)" },
+    { t: 0.63, top: [68, 42, 88],    bot: [242, 118, 55],  amb: 0.62, name: "Godhuli (Golden Dusk)" },
+    { t: 0.75, top: [14, 18, 42],    bot: [32, 34, 65],    amb: 0.18, name: "Sondhya Raat (Evening)" },
+    { t: 1.00, top: [10, 14, 34],    bot: [22, 28, 52],    amb: 0.15, name: "Nijhum Raat (Midnight)" }
+  ];
+
+  let k1 = keyframes[0], k2 = keyframes[1];
+  for (let i = 0; i < keyframes.length - 1; i++) {
+    if (t >= keyframes[i].t && t <= keyframes[i + 1].t) {
+      k1 = keyframes[i];
+      k2 = keyframes[i + 1];
+      break;
+    }
+  }
+  const localT = (t - k1.t) / (k2.t - k1.t || 1);
+
+  let topCol = lerpColor(k1.top, k2.top, localT);
+  let botCol = lerpColor(k1.bot, k2.bot, localT);
+  let ambient = lerp(k1.amb, k2.amb, localT);
+
+  // Darken & desaturate into brooding slate-indigo during Kalbaishakhi storm
+  if (storm > 0.01) {
+    const stormTop = [16, 22, 32];
+    const stormBot = [36, 48, 58];
+    topCol = lerpColor(topCol, stormTop, storm * 0.88);
+    botCol = lerpColor(botCol, stormBot, storm * 0.88);
+    ambient = lerp(ambient, Math.min(ambient, 0.28), storm * 0.82);
+  }
+
+  // Brief lightning illumination spike
+  if (lightningFlash > 0.01) {
+    topCol = lerpColor(topCol, [210, 225, 250], lightningFlash * 0.7);
+    botCol = lerpColor(botCol, [185, 200, 230], lightningFlash * 0.6);
+    ambient = Math.min(1.0, ambient + lightningFlash * 0.55);
+  }
+
+  return {
+    top: topCol,
+    bot: botCol,
+    ambient,
+    label: localT < 0.5 ? k1.name : k2.name
+  };
+}
+
+function formatClock(t) {
+  const totalMinutes = Math.floor(t * 24 * 60);
+  const hh = String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0');
+  const mm = String(totalMinutes % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+// ============================================================================
+// SCENE RENDERING FUNCTIONS
+// ============================================================================
+function drawSkyAndClouds(atm, t) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H * 0.68);
+  grad.addColorStop(0, rgb(atm.top));
+  grad.addColorStop(1, rgb(atm.bot));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H * 0.68);
+
+  // Stars (obscured by storm clouds)
+  const nightAlpha = Math.max(0, (1 - atm.ambient * 1.65) * (1 - stormIntensity * 1.2));
+  if (nightAlpha > 0.02) {
+    stars.forEach(s => {
+      const twinkle = 0.5 + 0.5 * Math.sin(frame * 0.04 + s.phase);
+      ctx.fillStyle = `rgba(255, 250, 230, ${nightAlpha * twinkle})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  // Sun or Moon (dimmed by storm clouds)
+  const celestialVis = Math.max(0, 1 - stormIntensity * 1.25);
+  if (celestialVis > 0.02) {
+    const isDay = t > 0.21 && t < 0.69;
+    if (isDay) {
+      const sunProgress = (t - 0.21) / 0.48;
+      const sunX = lerp(160, W - 220, sunProgress);
+      const sunY = 260 - Math.sin(sunProgress * Math.PI) * 195;
+
+      const sunGrad = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, 85);
+      sunGrad.addColorStop(0, `rgba(255, 240, 180, ${0.95 * celestialVis})`);
+      sunGrad.addColorStop(0.35, `rgba(255, 160, 75, ${0.45 * celestialVis})`);
+      sunGrad.addColorStop(1, 'rgba(255, 110, 50, 0)');
+      ctx.fillStyle = sunGrad;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 85, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(255, 235, 179, ${celestialVis})`;
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 22, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (nightAlpha > 0.05) {
+      // Crescent Moon
+      const moonX = 740, moonY = 95;
+      ctx.save();
+      ctx.fillStyle = `rgba(255, 248, 220, ${nightAlpha * celestialVis})`;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb(atm.top);
+      ctx.beginPath();
+      ctx.arc(moonX - 7, moonY - 4, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Forked Lightning Bolt in Sky
+  if (activeBolt && activeBolt.alpha > 0.02) {
+    ctx.save();
+    ctx.strokeStyle = `rgba(235, 245, 255, ${activeBolt.alpha})`;
+    ctx.shadowColor = 'rgba(165, 210, 255, 0.95)';
+    ctx.shadowBlur = 18;
+    activeBolt.segments.forEach(seg => {
+      ctx.lineWidth = seg.width;
+      ctx.beginPath();
+      ctx.moveTo(seg.x1, seg.y1);
+      ctx.lineTo(seg.x2, seg.y2);
+      ctx.stroke();
+    });
+    ctx.restore();
+    activeBolt.alpha *= 0.84;
+  }
+
+  // Rolling Kalbaishakhi Storm Clouds (Megh)
+  if (stormIntensity > 0.02) {
+    stormClouds.forEach(c => {
+      c.x -= c.speed * (1 + stormIntensity * 2.8);
+      if (c.x < -c.w) c.x = W + c.w * 0.6;
+
+      const cloudAlpha = Math.min(0.92, stormIntensity * 1.1);
+      const baseVal = Math.round(22 + atm.ambient * 28 + c.shadeOffset + lightningFlash * 65);
+      ctx.fillStyle = `rgba(${baseVal}, ${baseVal + 4}, ${baseVal + 12}, ${cloudAlpha})`;
+
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, c.w * 0.55, c.h * 0.6, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x - c.w * 0.28, c.y + 10, c.w * 0.38, c.h * 0.48, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x + c.w * 0.28, c.y + 8, c.w * 0.42, c.h * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+}
+
+function drawDistantHorizon(atm) {
+  const shade = atm.ambient;
+  // Distant misty village tree line across the paddy fields
+  ctx.fillStyle = rgb([Math.round(35 * shade), Math.round(58 * shade), Math.round(45 * shade)]);
+  ctx.beginPath();
+  ctx.moveTo(0, 315);
+  for (let x = 0; x <= W; x += 25) {
+    const windShift = Math.sin(frame * 0.05 + x * 0.02) * stormIntensity * 4;
+    const bump = Math.sin(x * 0.04) * 12 + Math.cos(x * 0.11) * 7 + windShift;
+    ctx.lineTo(x, 292 - bump);
+  }
+  ctx.lineTo(W, 340);
+  ctx.lineTo(0, 340);
+  ctx.closePath();
+  ctx.fill();
+
+  // Golden / Emerald paddy field (Dhan khet) strip
+  const paddyColor = lerpColor([24, 38, 22], [138, 165, 58], shade);
+  ctx.fillStyle = rgb(paddyColor);
+  ctx.fillRect(0, 315, W, 45);
+}
+
+function drawRiver(atm) {
+  // River occupies lower canvas with sky reflection
+  const riverGrad = ctx.createLinearGradient(0, 355, 0, H);
+  riverGrad.addColorStop(0, rgb(lerpColor(atm.bot, [22, 42, 52], 0.45)));
+  riverGrad.addColorStop(1, rgb(lerpColor(atm.top, [10, 24, 32], 0.65)));
+  ctx.fillStyle = riverGrad;
+  ctx.fillRect(0, 355, W, H - 355);
+
+  // Shimmering water ripples (choppy during Kalbaishakhi wind)
+  const waveSpeed = 0.03 + stormIntensity * 0.08;
+  ctx.strokeStyle = `rgba(235, 210, 165, ${0.16 + atm.ambient * 0.14})`;
+  ctx.lineWidth = 1.2 + stormIntensity * 0.8;
+  for (let i = 0; i < 28; i++) {
+    const ry = 368 + i * 6;
+    const waveOffset = Math.sin(frame * waveSpeed + i) * (12 + stormIntensity * 14);
+    ctx.beginPath();
+    ctx.moveTo(220 + (i % 5) * 85 + waveOffset, ry);
+    ctx.lineTo(265 + (i % 5) * 85 + waveOffset, ry);
+    ctx.stroke();
+  }
+}
+
+function drawLandAndVillage(atm) {
+  const s = atm.ambient;
+  // Lanterns turn on at dusk/night OR when storm clouds make the village dark
+  const lanternOn = s < 0.68 || stormIntensity > 0.45;
+
+  // Left riverbank & village mound (Vite/Maath)
+  ctx.fillStyle = rgb(lerpColor([22, 26, 18], [92, 105, 55], s));
+  ctx.beginPath();
+  ctx.moveTo(0, 325);
+  ctx.quadraticCurveTo(340, 320, 610, 368);
+  ctx.quadraticCurveTo(480, 415, 0, 430);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mud courtyard (Uthan) - gets darker & slicker with wet sheen when raining
+  const dryMud = lerpColor([34, 28, 22], [168, 136, 96], s);
+  const wetMud = lerpColor([22, 18, 15], [98, 78, 56], s);
+  ctx.fillStyle = rgb(lerpColor(dryMud, wetMud, stormIntensity));
+  ctx.beginPath();
+  ctx.ellipse(275, 368, 195, 28, 0.03, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Haystack (Khorer Gada)
+  const hayCol = rgb(lerpColor([42, 34, 20], [198, 158, 72], s));
+  ctx.fillStyle = hayCol;
+  ctx.beginPath();
+  ctx.moveTo(75, 362);
+  ctx.quadraticCurveTo(78, 305, 102, 290);
+  ctx.quadraticCurveTo(126, 305, 129, 362);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bamboo pole inside haystack
+  ctx.strokeStyle = rgb(lerpColor([30, 25, 15], [120, 95, 45], s));
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(102, 275);
+  ctx.lineTo(102, 292);
+  ctx.stroke();
+
+  // --- House 1: Classic Chouchala Tin & Mud Ghar ---
+  const mudWall = rgb(lerpColor([38, 30, 24], [156, 118, 82], s));
+  const tinRoof = rgb(lerpColor([34, 40, 48], [142, 152, 160], s + lightningFlash * 0.3));
+  const bambooPost = rgb(lerpColor([25, 20, 14], [95, 72, 42], s));
+
+  // Raised Mud Plinth (Pota)
+  ctx.fillStyle = rgb(lerpColor([26, 20, 16], [112, 82, 56], s));
+  ctx.fillRect(160, 348, 135, 14);
+
+  // Mud Walls
+  ctx.fillStyle = mudWall;
+  ctx.fillRect(168, 292, 118, 56);
+
+  // Corrugated Tin Roof (Chouchala curved Bengal style)
+  ctx.fillStyle = tinRoof;
+  ctx.beginPath();
+  ctx.moveTo(152, 296);
+  ctx.quadraticCurveTo(227, 252, 227, 255);
+  ctx.quadraticCurveTo(227, 252, 302, 296);
+  ctx.quadraticCurveTo(227, 287, 152, 296);
+  ctx.fill();
+
+  // Subtle corrugation ridges on the tin roof
+  ctx.strokeStyle = `rgba(20, 25, 30, 0.22)`;
+  ctx.lineWidth = 1;
+  for (let rx = 165; rx <= 290; rx += 12) {
+    ctx.beginPath();
+    ctx.moveTo(227 + (rx - 227) * 0.35, 263);
+    ctx.lineTo(rx, 293);
+    ctx.stroke();
+  }
+
+  // Door & Windows
+  ctx.fillStyle = lanternOn ? '#ffaa3b' : '#1e1712';
+  ctx.fillRect(216, 312, 22, 36); // Open doorway
+  ctx.fillRect(182, 308, 16, 16); // Left window
+  ctx.fillRect(256, 308, 16, 16); // Right window
+
+  // Hanging Hurricane Lantern (Hariken) & Warm Glow on Veranda
+  if (lanternOn) {
+    const flicker = 0.92 + 0.08 * Math.sin(frame * (0.2 + stormIntensity * 0.4));
+    const glowStrength = Math.max(0.35, (1 - s) * 0.88) * flicker;
+    const lanternGrad = ctx.createRadialGradient(227, 330, 4, 227, 338, 98);
+    lanternGrad.addColorStop(0, `rgba(255, 195, 80, ${glowStrength})`);
+    lanternGrad.addColorStop(0.45, `rgba(255, 125, 30, ${glowStrength * 0.45})`);
+    lanternGrad.addColorStop(1, 'rgba(255, 100, 20, 0)');
+    ctx.fillStyle = lanternGrad;
+    ctx.beginPath();
+    ctx.arc(227, 338, 98, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Wet courtyard reflection of the Hariken lantern during rain
+    if (stormIntensity > 0.15) {
+      ctx.fillStyle = `rgba(255, 175, 65, ${stormIntensity * 0.22 * flicker})`;
+      ctx.beginPath();
+      ctx.ellipse(227, 368, 34, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // --- House 2: Smaller Kitchen Hut (Rannaghar) with Thatched Roof ---
+  ctx.fillStyle = mudWall;
+  ctx.fillRect(330, 310, 78, 42);
+  ctx.fillStyle = rgb(lerpColor([38, 32, 20], [168, 138, 76], s));
+  ctx.beginPath();
+  ctx.moveTo(320, 314);
+  ctx.lineTo(369, 278);
+  ctx.lineTo(418, 314);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cooking smoke rising from Rannaghar (dampened and blown sideways during storm)
+  const smokeVisibility = Math.max(0.15, 1 - stormIntensity * 0.75);
+  ctx.save();
+  for (let i = 0; i < 6; i++) {
+    const progress = ((frame * 0.45 + i * 18) % 90) / 90;
+    const smokeY = 275 - progress * 90 * (1 - stormIntensity * 0.45);
+    const windDrift = progress * stormIntensity * -65;
+    const smokeX = 369 + Math.sin(frame * 0.03 + i) * 12 + windDrift;
+    const alpha = (1 - progress) * 0.22 * smokeVisibility;
+    ctx.fillStyle = `rgba(210, 215, 225, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(smokeX, smokeY, 8 + progress * 14, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Wooden Bamboo Jetty (Ghat) leading to the river
+  ctx.strokeStyle = bambooPost;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(455, 360);
+  ctx.lineTo(525, 392);
+  ctx.moveTo(475, 355);
+  ctx.lineTo(545, 387);
+  ctx.stroke();
+
+  for (let i = 0; i < 4; i++) {
+    const px = 465 + i * 20;
+    const py = 362 + i * 9;
+    ctx.beginPath();
+    ctx.moveTo(px, py - 12);
+    ctx.lineTo(px, py + 18);
+    ctx.stroke();
+  }
+}
+
+function drawTrees(atm) {
+  const s = atm.ambient;
+  // Dramatic wind bending during Kalbaishakhi storm (blowing right-to-left)
+  const calmSway = Math.sin(frame * 0.025) * 6;
+  const gustOsc = Math.sin(frame * 0.09) * 14 + Math.cos(frame * 0.05) * 8;
+  const stormBend = -stormIntensity * 34 + stormIntensity * gustOsc;
+  const sway = calmSway + stormBend;
+
+  const trunkCol = rgb(lerpColor([20, 18, 16], [78, 62, 48], s));
+  const leafCol = rgb(lerpColor([15, 24, 18], [48, 92, 42], s));
+
+  function drawCoconutTree(bx, by, topX, topY, scale = 1) {
+    const curTopX = topX + sway * 0.55;
+    const curTopY = topY + Math.abs(sway) * 0.18;
+
+    ctx.strokeStyle = trunkCol;
+    ctx.lineWidth = 9 * scale;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.quadraticCurveTo((bx + topX) / 2 + 18 + sway * 0.2, (by + topY) / 2, curTopX, curTopY);
+    ctx.stroke();
+
+    // Coconut Fronds whipping in the wind
+    const angles = [-2.6, -2.0, -1.4, -0.7, -0.1, 0.5, 1.1];
+    ctx.strokeStyle = leafCol;
+    ctx.lineWidth = 3.5 * scale;
+    angles.forEach((ang, idx) => {
+      const len = (58 + (idx % 2) * 12) * scale;
+      const flutter = Math.sin(frame * 0.18 + idx) * stormIntensity * 9;
+      const ex = curTopX + Math.cos(ang) * len + sway * 1.15 + flutter;
+      const ey = curTopY + Math.sin(ang) * len + 18;
+      ctx.beginPath();
+      ctx.moveTo(curTopX, curTopY);
+      ctx.quadraticCurveTo(
+        curTopX + Math.cos(ang) * (len * 0.5) + sway * 0.4,
+        curTopY + Math.sin(ang) * (len * 0.5) - 12,
+        ex,
+        ey
+      );
+      ctx.stroke();
+    });
+  }
+
+  // Draw two iconic Coconut palms (Narkel Gach)
+  drawCoconutTree(142, 345, 118, 165, 1.0);
+  drawCoconutTree(425, 352, 458, 185, 0.92);
+
+  // Date Palm Tree (Khejur Gach) with clay sap pot (Rosh-er Hari)
+  const kx = 515, ky = 365;
+  const kTopX = 538 + sway * 0.42;
+  const kTopY = 235 + Math.abs(sway) * 0.12;
+
+  ctx.strokeStyle = trunkCol;
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(kx, ky);
+  ctx.quadraticCurveTo(520 + sway * 0.15, 300, kTopX, kTopY);
+  ctx.stroke();
+
+  // Clay pot (Rosh-er Hari) tied to the Khejur tree neck
+  ctx.fillStyle = rgb(lerpColor([45, 25, 18], [165, 82, 48], s));
+  ctx.beginPath();
+  ctx.arc(kTopX - 5, kTopY + 14, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Spiky Khejur fronds
+  for (let a = -2.4; a <= 0.6; a += 0.35) {
+    ctx.strokeStyle = leafCol;
+    ctx.lineWidth = 2.5;
+    const tipFlutter = Math.cos(frame * 0.2 + a) * stormIntensity * 6;
+    ctx.beginPath();
+    ctx.moveTo(kTopX, kTopY);
+    ctx.lineTo(
+      kTopX + Math.cos(a) * 42 + sway * 0.75 + tipFlutter,
+      kTopY + Math.sin(a) * 42
+    );
+    ctx.stroke();
+  }
+}
+
+function drawNouka(atm) {
+  const s = atm.ambient;
+  // Wooden country boat (Nouka) - pitches and rocks more during Kalbaishakhi
+  const bx = 680 + Math.sin(frame * 0.012) * 35;
+  const waveBob = Math.sin(frame * (0.04 + stormIntensity * 0.05)) * (2.5 + stormIntensity * 6);
+  const pitchAngle = Math.sin(frame * (0.035 + stormIntensity * 0.06)) * (0.015 + stormIntensity * 0.065);
+  const by = 425 + waveBob;
+
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.rotate(pitchAngle);
+
+  // Water reflection under boat
+  ctx.fillStyle = 'rgba(10, 15, 20, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 78, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Woven bamboo canopy (Chhoi)
+  ctx.fillStyle = rgb(lerpColor([35, 28, 18], [158, 122, 68], s));
+  ctx.beginPath();
+  ctx.arc(5, 2, 34, Math.PI, 0);
+  ctx.fill();
+
+  // Lantern hanging inside the Nouka canopy at night/dusk or storm
+  if (s < 0.68 || stormIntensity > 0.45) {
+    const glow = ctx.createRadialGradient(-10, 0, 2, -10, 8, 48);
+    glow.addColorStop(0, 'rgba(255, 200, 90, 0.9)');
+    glow.addColorStop(1, 'rgba(255, 140, 30, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(-10, 8, 48, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Boatman (Majhi) silhouette with conical hat (Mathal)
+  ctx.fillStyle = rgb(lerpColor([15, 15, 18], [52, 42, 36], s));
+  ctx.fillRect(-48, -16, 8, 18); // Body
+  ctx.beginPath();
+  ctx.moveTo(-54, -18);
+  ctx.lineTo(-44, -26);
+  ctx.lineTo(-34, -18);
+  ctx.closePath();
+  ctx.fill();
+
+  // Oar (Boitha)
+  ctx.strokeStyle = '#2a2018';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-45, -8);
+  ctx.lineTo(-72, 16 + Math.sin(frame * 0.06) * 4);
+  ctx.stroke();
+
+  // Curved wooden hull
+  ctx.fillStyle = rgb(lerpColor([18, 14, 12], [68, 46, 32], s));
+  ctx.beginPath();
+  ctx.moveTo(-82, -8);
+  ctx.quadraticCurveTo(0, 22, 86, -12);
+  ctx.quadraticCurveTo(45, 6, 0, 6);
+  ctx.quadraticCurveTo(-45, 6, -82, -8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawShaplaAndWildlife(atm) {
+  const s = atm.ambient;
+
+  // Shapla (Water Lilies) in foreground left river corner
+  waterLilies.forEach((w, idx) => {
+    const bob = Math.sin(frame * 0.05 + idx) * stormIntensity * 2;
+    ctx.fillStyle = rgb(lerpColor([18, 32, 22], [52, 108, 58], s));
+    ctx.beginPath();
+    ctx.ellipse(w.x, w.y + bob, 16 * w.scale, 5 * w.scale, 0, 0.2, Math.PI * 1.9);
+    ctx.lineTo(w.x, w.y + bob);
+    ctx.fill();
+
+    // Pinkish-white Shapla petals
+    ctx.fillStyle = rgb(lerpColor([120, 85, 105], [245, 195, 215], s));
+    for (let p = -2; p <= 2; p++) {
+      ctx.beginPath();
+      ctx.ellipse(w.x + p * 3, w.y - 5 + bob, 3 * w.scale, 7 * w.scale, p * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Flock of birds flying home (fly faster to seek shelter when storm starts)
+  const birdVis = Math.max(0, (s - 0.22) * (1 - stormIntensity * 1.25));
+  if (birdVis > 0.05) {
+    ctx.strokeStyle = `rgba(30, 25, 35, ${Math.min(0.8, birdVis)})`;
+    ctx.lineWidth = 1.8;
+    birds.forEach(b => {
+      b.x -= 0.65 + stormIntensity * 2.2;
+      if (b.x < -30) b.x = W + 30;
+      const wingY = Math.sin(frame * (0.15 + stormIntensity * 0.15) + b.wingPhase) * 5;
+      ctx.beginPath();
+      ctx.moveTo(b.x - 6, b.y - wingY);
+      ctx.quadraticCurveTo(b.x - 3, b.y - 4, b.x, b.y);
+      ctx.quadraticCurveTo(b.x + 3, b.y - 4, b.x + 6, b.y - wingY);
+      ctx.stroke();
+    });
+  }
+
+  // Jonaki Poka (Fireflies) — emerge on calm nights, shelter under leaves during heavy rain
+  const dryNightFactor = Math.max(0, (0.65 - s) * 1.8) * Math.max(0, 1 - stormIntensity * 2.2);
+  if (dryNightFactor > 0.03) {
+    fireflies.forEach(f => {
+      f.x += f.vx;
+      f.y += f.vy;
+      if (f.x < 0) f.x = W;
+      if (f.x > W) f.x = 0;
+      if (f.y < H * 0.3) f.vy *= -1;
+      if (f.y > H * 0.85) f.vy *= -1;
+
+      const pulse = Math.max(0, Math.sin(frame * 0.07 + f.phase));
+      const a = dryNightFactor * pulse;
+      if (a > 0.05) {
+        ctx.fillStyle = `rgba(195, 255, 95, ${a})`;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(180, 255, 70, ${a * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+}
+
+// ============================================================================
+// MONSOON RAIN, TIN-ROOF SPLASHES & RIVER RIPPLES
+// ============================================================================
+function drawMonsoonRainAndEffects(atm) {
+  if (stormIntensity <= 0.001 && waterRipples.length === 0 && roofSplashes.length === 0) return;
+
+  // 1. Expanding Water Ripples on River & Mud Uthan
+  for (let i = waterRipples.length - 1; i >= 0; i--) {
+    const rp = waterRipples[i];
+    rp.r += rp.isCourtyard ? 0.35 : 0.55;
+    rp.life -= 0.028;
+    if (rp.life <= 0 || rp.r >= rp.maxR) {
+      waterRipples.splice(i, 1);
+      continue;
+    }
+    const alpha = rp.life * (rp.isCourtyard ? 0.32 : 0.48);
+    ctx.strokeStyle = `rgba(215, 235, 250, ${alpha})`;
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.ellipse(rp.x, rp.y, rp.r, rp.r * 0.28, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 2. Active Slanted Raindrops
+  const activeCount = Math.floor(Math.pow(stormIntensity, 0.82) * MAX_RAINDROPS);
+  // Slant transitions from gentle near-vertical (-1.0) in drizzle to gale (-8.5) in Kalbaishakhi
+  const windSlantX = -1.0 - stormIntensity * 7.5;
+
+  if (activeCount > 0) {
+    ctx.strokeStyle = `rgba(205, 225, 245, ${0.24 + stormIntensity * 0.36})`;
+    ctx.lineWidth = 1.25;
+    ctx.beginPath();
+    for (let i = 0; i < activeCount; i++) {
+      const r = raindrops[i];
+      const dropLen = r.len * (0.8 + stormIntensity * 0.4);
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.x + windSlantX, r.y + dropLen);
+
+      // Advance raindrop
+      const prevY = r.y;
+      r.x += windSlantX * (r.speed * 0.08);
+      r.y += r.speed * (0.85 + stormIntensity * 0.45);
+
+      // Check collision with Chouchala Tin Roof (x: 152..302, y: ~262..296)
+      if (r.x >= 154 && r.x <= 300) {
+        // Approximate curved roof surface Y at r.x
+        const normX = (r.x - 227) / 75;
+        const roofSurfaceY = 264 + normX * normX * 30;
+        if (prevY <= roofSurfaceY + 8 && r.y >= roofSurfaceY - 4) {
+          spawnRoofSplash(r.x, roofSurfaceY);
+          r.y = -15 - Math.random() * 30;
+          r.x = Math.random() * (W + 240);
+          continue;
+        }
+      }
+
+      // Check collision with Rannaghar thatched roof (x: 322..416, y: ~284..314)
+      if (r.x >= 324 && r.x <= 414 && prevY <= 312 && r.y >= 290 && Math.random() < 0.6) {
+        spawnRoofSplash(r.x, r.y);
+        r.y = -15 - Math.random() * 30;
+        r.x = Math.random() * (W + 240);
+        continue;
+      }
+
+      // Check impact with River or Mud Courtyard
+      if (r.y > 358 && Math.random() < (0.07 + stormIntensity * 0.08)) {
+        const onCourtyard = r.x > 95 && r.x < 455 && r.y < 388;
+        const onRiver = r.x > 480 || r.y > 395;
+        if (onCourtyard || onRiver) {
+          spawnWaterRipple(r.x, r.y, onCourtyard);
+          r.y = -15 - Math.random() * 30;
+          r.x = Math.random() * (W + 240);
+          continue;
+        }
+      }
+
+      // Wrap around screen edges
+      if (r.y > H + 20 || r.x < -40) {
+        r.y = -15 - Math.random() * 40;
+        r.x = Math.random() * (W + 240);
+      }
+    }
+    ctx.stroke();
+  }
+
+  // 3. Tin-Roof Splash Droplets
+  ctx.fillStyle = `rgba(225, 240, 255, 0.75)`;
+  for (let i = roofSplashes.length - 1; i >= 0; i--) {
+    const sp = roofSplashes[i];
+    sp.x += sp.vx;
+    sp.y += sp.vy;
+    sp.vy += 0.28; // Gravity
+    sp.life -= 0.075;
+    if (sp.life <= 0) {
+      roofSplashes.splice(i, 1);
+      continue;
+    }
+    ctx.globalAlpha = sp.life;
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1.0;
+
+  // 4. Atmospheric Wind Mist Streaks & Lightning Screen Overlay
+  if (stormIntensity > 0.35) {
+    const mistAlpha = (stormIntensity - 0.35) * 0.14;
+    const mistGrad = ctx.createLinearGradient(0, 250, 0, 420);
+    mistGrad.addColorStop(0, 'rgba(180, 200, 215, 0)');
+    mistGrad.addColorStop(0.5, `rgba(180, 200, 215, ${mistAlpha})`);
+    mistGrad.addColorStop(1, 'rgba(180, 200, 215, 0)');
+    ctx.fillStyle = mistGrad;
+    ctx.fillRect(0, 250, W, 170);
+  }
+
+  if (lightningFlash > 0.02) {
+    ctx.fillStyle = `rgba(230, 240, 255, ${lightningFlash * 0.28})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// ============================================================================
+// MAIN ANIMATION LOOP
+// ============================================================================
+function animate() {
+  frame++;
+
+  // Smoothly interpolate storm intensity toward target when not manually dragging
+  if (isUserDraggingStorm) {
+    stormIntensity = stormTarget;
+  } else {
+    if (Math.abs(stormTarget - stormIntensity) > 0.003) {
+      stormIntensity += (stormTarget - stormIntensity) * 0.045;
+    } else {
+      stormIntensity = stormTarget;
+    }
+    stormSlider.value = Math.round(stormIntensity * 100);
+    stormPctLabel.textContent = `${Math.round(stormIntensity * 100)}%`;
+    syncStormStatus(stormIntensity);
+  }
+
+  // Decay lightning flash
+  if (lightningFlash > 0.005) {
+    lightningFlash *= 0.86;
+  } else {
+    lightningFlash = 0;
+  }
+
+  // Spontaneous lightning strikes during heavy Kalbaishakhi
+  if (stormIntensity > 0.45 && Math.random() < 0.0035 * stormIntensity) {
+    triggerLightningBolt();
+  }
+
+  // Update procedural audio engine
+  audioEngine.update(stormIntensity, frame);
+
+  // Advance time of day
+  if (autoCycle) {
+    timeOfDay = (timeOfDay + 0.00022) % 1.0;
+    timeSlider.value = Math.round(timeOfDay * 1000);
+  }
+
+  const atm = getAtmosphere(timeOfDay, stormIntensity);
+  timeLabel.textContent = `Time: ${atm.label}`;
+  clockReadout.textContent = formatClock(timeOfDay);
+
+  ctx.clearRect(0, 0, W, H);
+  drawSkyAndClouds(atm, timeOfDay);
+  drawDistantHorizon(atm);
+  drawRiver(atm);
+  drawLandAndVillage(atm);
+  drawTrees(atm);
+  drawNouka(atm);
+  drawShaplaAndWildlife(atm);
+  drawMonsoonRainAndEffects(atm);
+
+  requestAnimationFrame(animate);
+}
+
+window.onload = function () {
+  animate();
+};
+</script>
+</body>
+</html>
