@@ -159,15 +159,18 @@
         </div>
       </div>
 
-      <!-- Audio & Lightning Trigger Controls -->
+      <!-- Audio, Bird & Lightning Trigger Controls -->
       <div class="md:col-span-3 flex items-center justify-between md:justify-end gap-2 bg-[#1f1914] p-2.5 rounded-lg border border-[#2e241b]">
-        <button id="strikeBtn" class="btn-retro px-2.5 py-1.5 rounded text-xs font-bold shrink-0" title="Trigger Biddut (Lightning Strike)">
+        <button id="strikeBtn" class="btn-retro px-2 py-1.5 rounded text-xs font-bold shrink-0" title="Trigger Biddut (Lightning Strike & Thunder)">
           ⚡ Biddut
         </button>
-        <button id="muteBtn" class="btn-retro px-2.5 py-1.5 rounded text-xs font-bold shrink-0" title="Toggle Web Audio Synthesizer">
+        <button id="birdBtn" class="btn-retro px-2 py-1.5 rounded text-xs font-bold shrink-0" title="Play Pakhir Daak (Bird Chirp)">
+          🐦 Pakhi
+        </button>
+        <button id="muteBtn" class="btn-retro px-2 py-1.5 rounded text-xs font-bold shrink-0" title="Toggle Web Audio Synthesizer">
           🔊 Audio
         </button>
-        <input type="range" id="volSlider" min="0" max="100" value="75" class="w-16 sm:w-20" title="Master Volume">
+        <input type="range" id="volSlider" min="0" max="100" value="75" class="w-14 sm:w-16" title="Master Volume">
       </div>
 
     </div>
@@ -194,6 +197,7 @@ const stormPctLabel = document.getElementById('stormPctLabel');
 const weatherBadge = document.getElementById('weatherBadge');
 const statusDot = document.getElementById('statusDot');
 const strikeBtn = document.getElementById('strikeBtn');
+const birdBtn = document.getElementById('birdBtn');
 const muteBtn = document.getElementById('muteBtn');
 const volSlider = document.getElementById('volSlider');
 const audioNotice = document.getElementById('audioNotice');
@@ -230,18 +234,24 @@ class GramBanglaAudioEngine {
     this.tinRoofGain = null;
     this.windGain = null;
     this.windFilter = null;
+    this.whiteBuffer = null;
+    this.pinkBuffer = null;
+    this.nextBirdTime = 0;
   }
 
   init() {
     if (this.initialized) {
       if (this.ctx && this.ctx.state === 'suspended') {
-        this.ctx.resume();
+        this.ctx.resume().catch(() => {});
       }
       return;
     }
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioCtx();
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
 
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = this.isMuted ? 0 : this.masterVol;
@@ -270,6 +280,9 @@ class GramBanglaAudioEngine {
         pinkData[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.04;
         b6 = white * 0.115926;
       }
+
+      this.whiteBuffer = whiteBuffer;
+      this.pinkBuffer = pinkBuffer;
 
       // 1. Ambient Monsoon Rain Layer (Pink noise through lowpass)
       const rainSource = this.ctx.createBufferSource();
@@ -336,7 +349,7 @@ class GramBanglaAudioEngine {
     }
   }
 
-  update(stormLevel, frameCount) {
+  update(stormLevel, frameCount, ambient = 0.5, timeOfDay = 0.5) {
     if (!this.initialized || !this.ctx) return;
 
     const now = this.ctx.currentTime;
@@ -344,68 +357,187 @@ class GramBanglaAudioEngine {
       this.rainGain.gain.setTargetAtTime(0, now, 0.06);
       this.tinRoofGain.gain.setTargetAtTime(0, now, 0.06);
       this.windGain.gain.setTargetAtTime(0, now, 0.06);
-      return;
+    } else {
+      // Smoothly modulate rain, tin roof pattering, and howling wind
+      const targetRain = Math.pow(stormLevel, 1.1) * 0.65;
+      const targetTin = Math.pow(stormLevel, 1.4) * 0.22;
+      const gustWave = 0.5 + 0.5 * Math.sin(frameCount * 0.025) * Math.cos(frameCount * 0.011);
+      const targetWind = stormLevel * (0.25 + gustWave * 0.35);
+
+      this.rainGain.gain.setTargetAtTime(targetRain, now, 0.08);
+      this.tinRoofGain.gain.setTargetAtTime(targetTin, now, 0.08);
+      this.windGain.gain.setTargetAtTime(targetWind, now, 0.12);
+
+      // Modulate wind pitch with gusts
+      const windFreq = 190 + stormLevel * 220 + gustWave * 160;
+      this.windFilter.frequency.setTargetAtTime(windFreq, now, 0.12);
     }
 
-    // Smoothly modulate rain, tin roof pattering, and howling wind
-    const targetRain = Math.pow(stormLevel, 1.1) * 0.65;
-    const targetTin = Math.pow(stormLevel, 1.4) * 0.22;
-    const gustWave = 0.5 + 0.5 * Math.sin(frameCount * 0.025) * Math.cos(frameCount * 0.011);
-    const targetWind = stormLevel * (0.25 + gustWave * 0.35);
-
-    this.rainGain.gain.setTargetAtTime(targetRain, now, 0.08);
-    this.tinRoofGain.gain.setTargetAtTime(targetTin, now, 0.08);
-    this.windGain.gain.setTargetAtTime(targetWind, now, 0.12);
-
-    // Modulate wind pitch with gusts
-    const windFreq = 190 + stormLevel * 220 + gustWave * 160;
-    this.windFilter.frequency.setTargetAtTime(windFreq, now, 0.12);
+    // Natural procedural bird song throughout the day & dusk
+    this.updateBirdSong(ambient, stormLevel, timeOfDay);
   }
 
-  triggerThunder(intensity = 1.0) {
+  // --- Procedural Village Bird Song (Pakhir Daak) ---
+  playBirdSong(volume = 0.24) {
+    if (!this.initialized) this.init();
+    if (!this.ctx || this.isMuted) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+
+    const now = this.ctx.currentTime + 0.01;
+    const types = ['sweet_double', 'warble_trill', 'cheerful_call', 'tailorbird'];
+    const pattern = types[Math.floor(Math.random() * types.length)];
+    const baseFreq = 2200 + Math.random() * 950;
+
+    let offset = 0;
+    const emitChirp = (fStart, fEnd, duration, gap, peakGain = 1.0) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+
+      const t0 = now + offset;
+      const t1 = t0 + duration;
+
+      osc.frequency.setValueAtTime(fStart, t0);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(250, fEnd), t1);
+
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.linearRampToValueAtTime(volume * peakGain, t0 + duration * 0.26);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(t0);
+      osc.stop(t1);
+
+      offset += duration + gap;
+    };
+
+    if (pattern === 'sweet_double') {
+      // Doel / Magpie-robin iconic two-tone chirp
+      emitChirp(baseFreq, baseFreq + 850, 0.06, 0.05, 0.9);
+      emitChirp(baseFreq + 350, baseFreq + 1300, 0.08, 0, 1.0);
+    } else if (pattern === 'warble_trill') {
+      // Bulbuli / Sparrow fast 3-note trill
+      for (let i = 0; i < 3; i++) {
+        emitChirp(baseFreq + i * 160, baseFreq + 600 + i * 120, 0.045, 0.035, 0.85);
+      }
+    } else if (pattern === 'tailorbird') {
+      // Tuntuni rapid click-chirp
+      emitChirp(baseFreq + 900, baseFreq + 1550, 0.038, 0.03, 0.95);
+      emitChirp(baseFreq + 750, baseFreq + 1450, 0.042, 0, 0.9);
+    } else {
+      // Melodious sliding call
+      emitChirp(baseFreq + 750, Math.max(1600, baseFreq - 200), 0.12, 0, 0.92);
+    }
+  }
+
+  updateBirdSong(ambient, stormLevel, timeOfDay) {
     if (!this.initialized || !this.ctx || this.isMuted) return;
 
-    // Slight acoustic delay after visual flash for realism
-    const delay = 0.18 + Math.random() * 0.35;
-    const startTime = this.ctx.currentTime + delay;
-    const duration = 3.2 + Math.random() * 1.5;
-
-    // Create burst of brown/low-filtered noise for rolling thunder rumble
-    const bufLen = Math.floor(this.ctx.sampleRate * duration);
-    const buffer = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    let lastOut = 0.0;
-    for (let i = 0; i < bufLen; i++) {
-      const white = Math.random() * 2 - 1;
-      data[i] = (lastOut + (0.02 * white)) / 1.02;
-      lastOut = data[i];
-      // Add rolling amplitude envelopes (multiple echoes across the river plain)
-      const env = Math.sin((i / bufLen) * Math.PI);
-      const roll = 0.65 + 0.35 * Math.sin(i * 0.0012) * Math.cos(i * 0.00045);
-      data[i] *= 3.8 * env * roll;
+    const now = this.ctx.currentTime;
+    if (!this.nextBirdTime) {
+      this.nextBirdTime = now + 1.2 + Math.random() * 2.0;
     }
 
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
+    if (now >= this.nextBirdTime) {
+      // Birds sing during daylight/dawn/dusk and when calm or light drizzle
+      if (ambient > 0.22 && stormLevel < 0.40) {
+        // Birds chirp more actively during dawn (Bhor) and dusk (Godhuli)
+        const isDawnOrDusk = (timeOfDay >= 0.18 && timeOfDay <= 0.35) || (timeOfDay >= 0.58 && timeOfDay <= 0.72);
+        const birdVol = isDawnOrDusk ? 0.26 : 0.19;
+        this.playBirdSong(birdVol);
 
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(240, startTime);
-    filter.frequency.exponentialRampToValueAtTime(55, startTime + duration);
+        const delay = isDawnOrDusk ? (2.0 + Math.random() * 3.0) : (3.5 + Math.random() * 5.0);
+        this.nextBirdTime = now + delay;
+      } else {
+        // At night or during heavy storm tempest, birds shelter quietly
+        this.nextBirdTime = now + 4.0;
+      }
+    }
+  }
+
+  // --- Cinematic Biddut (Lightning Whip-Crack) & Rolling Thunder ---
+  triggerThunder(intensity = 1.0) {
+    if (!this.initialized) this.init();
+    if (!this.ctx || this.isMuted) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+
+    const now = this.ctx.currentTime;
+    const startCrack = now + 0.015; // Immediate sharp crack with the flash
+    const startRumble = now + 0.04;
+
+    // 1. Sharp Electric Lightning Snap / Crack (Biddut Chhata)
+    // Downward pitch transient punch
+    const crackOsc = this.ctx.createOscillator();
+    const crackOscGain = this.ctx.createGain();
+    crackOsc.type = 'sawtooth';
+    crackOsc.frequency.setValueAtTime(1450, startCrack);
+    crackOsc.frequency.exponentialRampToValueAtTime(110, startCrack + 0.055);
+
+    crackOscGain.gain.setValueAtTime(0.001, startCrack);
+    crackOscGain.gain.linearRampToValueAtTime(0.85 * intensity, startCrack + 0.004);
+    crackOscGain.gain.exponentialRampToValueAtTime(0.001, startCrack + 0.065);
+
+    crackOsc.connect(crackOscGain);
+    crackOscGain.connect(this.masterGain);
+    crackOsc.start(startCrack);
+    crackOsc.stop(startCrack + 0.075);
+
+    // High-frequency bandpass electric noise snap
+    if (this.whiteBuffer) {
+      const crackNoise = this.ctx.createBufferSource();
+      crackNoise.buffer = this.whiteBuffer;
+      const crackFilter = this.ctx.createBiquadFilter();
+      crackFilter.type = 'bandpass';
+      crackFilter.frequency.setValueAtTime(2600, startCrack);
+      crackFilter.Q.value = 1.6;
+
+      const crackGain = this.ctx.createGain();
+      crackGain.gain.setValueAtTime(0.001, startCrack);
+      crackGain.gain.linearRampToValueAtTime(0.95 * intensity, startCrack + 0.006);
+      crackGain.gain.exponentialRampToValueAtTime(0.001, startCrack + 0.13);
+
+      crackNoise.connect(crackFilter);
+      crackFilter.connect(crackGain);
+      crackGain.connect(this.masterGain);
+      crackNoise.start(startCrack);
+      crackNoise.stop(startCrack + 0.15);
+    }
+
+    // 2. Heavy Rolling Thunderclap & Reverberations across the River Plain (Megh Garjan)
+    const duration = 3.8 + Math.random() * 1.0;
+    const noiseSource = this.ctx.createBufferSource();
+    noiseSource.buffer = this.pinkBuffer || this.whiteBuffer;
+
+    const lowpass = this.ctx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.setValueAtTime(460, startRumble);
+    lowpass.frequency.exponentialRampToValueAtTime(115, startRumble + duration);
+
+    const bandpass = this.ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.setValueAtTime(280, startRumble);
+    bandpass.Q.value = 1.8;
 
     const thunderGain = this.ctx.createGain();
-    thunderGain.gain.setValueAtTime(0.01, startTime);
-    thunderGain.gain.linearRampToValueAtTime(0.95 * intensity, startTime + 0.12);
-    thunderGain.gain.exponentialRampToValueAtTime(0.35 * intensity, startTime + 0.9);
-    thunderGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    thunderGain.gain.setValueAtTime(0.001, startRumble);
+    // Shockwave boom peak
+    thunderGain.gain.linearRampToValueAtTime(1.05 * intensity, startRumble + 0.08);
+    // Multi-echo rolling thunder decays and surges across the landscape
+    thunderGain.gain.exponentialRampToValueAtTime(0.55 * intensity, startRumble + 0.42);
+    thunderGain.gain.linearRampToValueAtTime(0.75 * intensity, startRumble + 0.82); // Echo 1
+    thunderGain.gain.exponentialRampToValueAtTime(0.35 * intensity, startRumble + 1.45);
+    thunderGain.gain.linearRampToValueAtTime(0.48 * intensity, startRumble + 2.05); // Echo 2
+    thunderGain.gain.exponentialRampToValueAtTime(0.0001, startRumble + duration);
 
-    noise.connect(filter);
-    filter.connect(thunderGain);
+    noiseSource.connect(lowpass);
+    lowpass.connect(bandpass);
+    bandpass.connect(thunderGain);
     thunderGain.connect(this.masterGain);
 
-    noise.start(startTime);
-    noise.stop(startTime + duration);
+    noiseSource.start(startRumble);
+    noiseSource.stop(startRumble + duration);
   }
 
   setVolume(val) {
@@ -508,6 +640,22 @@ stormSlider.addEventListener('input', (e) => {
 strikeBtn.addEventListener('click', () => {
   audioEngine.init();
   triggerLightningBolt();
+});
+
+if (birdBtn) {
+  birdBtn.addEventListener('click', () => {
+    audioEngine.init();
+    audioEngine.playBirdSong(0.32);
+  });
+}
+
+canvas.addEventListener('click', (e) => {
+  audioEngine.init();
+  const rect = canvas.getBoundingClientRect();
+  const clickY = ((e.clientY - rect.top) / rect.height) * H;
+  if (clickY < 240 && stormIntensity < 0.45) {
+    audioEngine.playBirdSong(0.26);
+  }
 });
 
 muteBtn.addEventListener('click', () => {
@@ -620,6 +768,7 @@ function spawnWaterRipple(x, y, isCourtyard = false) {
 // FORKED LIGHTNING GENERATOR (Kalbaishakhi Biddut)
 // ============================================================================
 function triggerLightningBolt() {
+  audioEngine.init();
   lightningFlash = 1.0;
   const startX = 180 + Math.random() * (W - 320);
   const segments = [];
@@ -1361,9 +1510,6 @@ function animate() {
     triggerLightningBolt();
   }
 
-  // Update procedural audio engine
-  audioEngine.update(stormIntensity, frame);
-
   // Advance time of day
   if (autoCycle) {
     timeOfDay = (timeOfDay + 0.00022) % 1.0;
@@ -1373,6 +1519,9 @@ function animate() {
   const atm = getAtmosphere(timeOfDay, stormIntensity);
   timeLabel.textContent = `Time: ${atm.label}`;
   clockReadout.textContent = formatClock(timeOfDay);
+
+  // Update procedural audio engine (rain, wind & ambient bird song)
+  audioEngine.update(stormIntensity, frame, atm.ambient, timeOfDay);
 
   ctx.clearRect(0, 0, W, H);
   drawSkyAndClouds(atm, timeOfDay);
