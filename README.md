@@ -47,4 +47,4 @@ No installation, build tools, or server setup required.
 
 1. Clone or download the repository:
    ```bash
-   git clone https://github.com/your-username/village90s.git
+   git clone https://github.com/MdRakibul726/village90s.git
