@@ -1,8 +1,12 @@
 # 🌾 1990s Gram-Bangla — Kalbaishakhi & Monsoon Edition
 
+[![Live Demo](https://img.shields.io/badge/Demo-Play%20Live-brightgreen?style=for-the-badge&logo=googlechrome)](https://mdrakibul726.github.io/village90s/)
+
 An interactive, nostalgic audiovisual simulation of a 1990s rural Bangladeshi village (*Gram-Bangla*), built entirely with native **HTML5 Canvas 2D** and procedural **Web Audio API** in a single standalone file.
 
 Experience the peaceful countryside transition through the day (*Prohor*), or summon the fury of a sudden seasonal summer tempest (*Kalbaishakhi Jhor*).
+
+🎮 **[Play the Live Demo in your browser](https://mdrakibul726.github.io/village90s/)**
 
 ---
 
@@ -48,3 +52,21 @@ No installation, build tools, or server setup required.
 1. Clone or download the repository:
    ```bash
    git clone https://github.com/MdRakibul726/village90s.git
+   ```
+2. Open `index.html` in any modern web browser (Google Chrome, Microsoft Edge, Firefox, or Safari).
+3. Click **"🔊 Audio"** or **"⛈️ Kalbaishakhi Storm"** to unlock web audio and start the simulation.
+
+---
+
+## 🛠️ Built With
+
+- **HTML5 Canvas (2D Context)** — Hardware-accelerated 60 FPS procedural rendering.
+- **Web Audio API** — Real-time synthesized ambient rain, metallic tin impacts, wind, and thunder.
+- **Vanilla JavaScript (ES6+)** — Zero heavy runtime dependencies.
+- **Tailwind CSS (CDN)** — Responsive retro control HUD and layout.
+
+---
+
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE).
